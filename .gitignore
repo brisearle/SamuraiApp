@@ -6,3 +6,9 @@ SamuraiApp.Data/obj/
 SamuraiApp.UI/obj/
 
 .vs/
+
+SamuraiApp.Data/bin/
+
+SamuraiApp.Domain/bin/
+
+SamuraiApp.UI/bin/
