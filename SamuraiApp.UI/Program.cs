@@ -27,6 +27,23 @@ namespace SamuraiApp.UI
             //AddQuoteToExistingSamuraiWhileTracked();
             //AddQuoteToExistingSamuraiNotTracked(2);
             //Simpler_AddQuoteToExistingSamuraiNotTracked(3);
+            //EagerLoadSamuraiWithQuotes();
+            //ProjectSomeProperties();
+            //ProjectSamuraisWithQuotes();
+            //ExplicitLoadQuotes();
+            //FiteringWithRelatedData();
+            //ModifyingRelatedDataWhenTracked();
+            //ModifyingRelatedDataWhenNotTracked();
+            //AddingNewSamuraiToAnExistingBattle();
+            //ReturnBattleWithSamurais();
+            //AddAllSamuraisToAllBattles();
+            //RemoveSamuraiFromABattle();
+            //RemoveSamuraiFromABattleExplicit();
+            //AddNewSamuraiWithHorse();
+            //AddNewHorseToSamuraiUsinbgId();
+            //AddNewHorseToDisconnectedSamuraiObject();
+            //GetSamuraiWithHorse();
+            //GetHorsesWithSamurai();
             Console.Write("Press any Key...");
             Console.ReadKey();
         }
@@ -44,9 +61,9 @@ namespace SamuraiApp.UI
                 new Battle { Name = "Battle of Nagashino" });*/
             _context.SaveChanges();
         }
-        private static void AddSamuraisByName(params string [] names)
+        private static void AddSamuraisByName(params string[] names)
         {
-            foreach(string name in names)
+            foreach (string name in names)
             {
                 _context.Samurais.Add(new Samurai { Name = name });
             }
@@ -105,7 +122,7 @@ namespace SamuraiApp.UI
         private static void QueryAndUpdateBattles_Disconnected()
         {
             List<Battle> disconnectedBattles;
-            using(var context1=new SamuraiContext { })
+            using (var context1 = new SamuraiContext { })
             {
                 disconnectedBattles = _context.Battles.ToList();
             } //context1 is disposed
@@ -163,6 +180,169 @@ namespace SamuraiApp.UI
             using var newContext = new SamuraiContext();
             newContext.Quotes.Add(quote);
             newContext.SaveChanges();
+        }
+        private static void EagerLoadSamuraiWithQuotes()
+        {
+            //var samuraiWithQuotes = _context.Samurais.Include(s => s.Quotes).ToList();
+            //var splitQuery = _context.Samurais.AsSplitQuery().Include(s => s.Quotes).ToList();
+            var filterInclude =
+                _context.Samurais.Where(s => s.Name.Contains("Sampson"))
+                    .Include(s => s.Quotes).FirstOrDefault();
+        }
+        private static void ProjectSomeProperties()
+        {
+            var someProperties = _context.Samurais.Select(s => new { s.Id, s.Name }).ToList();
+            var idAndNames = _context.Samurais.Select(s => new IdAndName(s.Id, s.Name)).ToList();
+        }
+        public struct IdAndName
+        {
+            public IdAndName(int id, string name)
+            {
+                Id = id;
+                Name = name;
+            }
+            public int Id;
+            public string Name;
+        }
+        private static void ProjectSamuraisWithQuotes()
+        {
+            /*var somePropsWithQuotes = _context.Samurais
+                .Select(s => new { s.Id, s.Name, NumberOfQuotes = s.Quotes.Count })
+                .ToList();*/
+            /*var somePropsWithQuotes = _context.Samurais
+                .Select(s => new { s.Id, s.Name,
+                                   HappyQuotes = s.Quotes.Where(q=>q.Text.Contains("happy")) })
+                .ToList();*/
+            var samuraisAndQuotes = _context.Samurais
+                .Select(s => new
+                {
+                    Samurai = s,
+                    HappyQuotes = s.Quotes.Where(q => q.Text.Contains("happy"))
+                })
+                .ToList();
+            var firstsamurai = samuraisAndQuotes[0].Samurai.Name += " The Happiest";
+        }
+        private static void ExplicitLoadQuotes()
+        {
+            //make sure there's a horse in the DB, then clear the context's change tracker
+            _context.Set<Horse>().Add(new Horse { SamuraiId = 1, Name = "Mr. Ed" });
+            _context.SaveChanges();
+            _context.ChangeTracker.Clear();
+            //-----------------
+            var samurai = _context.Samurais.Find(1);
+            _context.Entry(samurai).Collection(s => s.Quotes).Load();
+            _context.Entry(samurai).Reference(s => s.Horse).Load();
+        }
+        private static void FiteringWithRelatedData()
+        {
+            var samurais = _context.Samurais
+                                   .Where(s => s.Quotes.Any(q => q.Text.Contains("happy")))
+                                   .ToList();
+        }
+        private static void ModifyingRelatedDataWhenTracked()
+        {
+            var samurai = _context.Samurais.Include(s => s.Quotes)
+                                           .FirstOrDefault(s => s.Id == 2);
+            samurai.Quotes[0].Text = "Did you hear that?";
+            _context.SaveChanges();
+        }
+        private static void ModifyingRelatedDataWhenNotTracked()
+        {
+            var samurai = _context.Samurais.Include(s => s.Quotes)
+                                           .FirstOrDefault(s => s.Id == 2);
+            var quote = samurai.Quotes[0];
+            quote.Text = "Did you hear that again?";
+
+            using var newContext = new SamuraiContext();
+            //newContext.Quotes.Update(quote); // Resulted in all quotes being updated, inefficient
+            newContext.Entry(quote).State = EntityState.Modified; // Entry method results in only one update
+            newContext.SaveChanges();
+        }
+        private static void AddingNewSamuraiToAnExistingBattle()
+        {
+            var battle = _context.Battles.FirstOrDefault();
+            battle.Samurais.Add(new Samurai { Name = "Takeda Shingen" });
+            _context.SaveChanges();
+        }
+        private static void ReturnBattleWithSamurais()
+        {
+            //var battle = _context.Battles.Include(b => b.Samurais).FirstOrDefault();
+            var battle = _context.Battles.Include(b => b.Samurais).ToList();
+        }
+        private static void AddAllSamuraisToAllBattles()
+        {
+            // Causes a failure if the Samurai is already in a battle, could filter it out as shown
+            /*var allbattles = _context.Battles.ToList();
+            var allSamurais = _context.Samurais.Where(s => s.Id != 19).ToList();*/
+
+            // Alternatively, could do the following which will only update modified changes but can 
+            // but can be inefficient since it slows down the change tracker
+            var allbattles = _context.Battles.Include(b => b.Samurais).ToList();
+            var allSamurais = _context.Samurais.ToList();
+
+            foreach (var battle in allbattles)
+            {
+                battle.Samurais.AddRange(allSamurais);
+            }
+            _context.SaveChanges();
+        }
+        private static void RemoveSamuraiFromABattle()
+        {
+            var battleWithSamurai = _context.Battles
+                .Include(b => b.Samurais.Where(s => s.Id == 12))
+                .Single(s => s.BattleId == 1);
+            var samurai = battleWithSamurai.Samurais[0];
+            battleWithSamurai.Samurais.Remove(samurai);
+            _context.SaveChanges();
+        }
+        private static void RemoveSamuraiFromABattleExplicit()
+        {
+            var b_s = _context.Set<BattleSamurai>()
+                .SingleOrDefault(bs => bs.BattleId == 1 && bs.SamuraiId == 10);
+            if (b_s != null)
+            {
+                _context.Remove(b_s); //_context.Set<BattleSamurai>().Remove() works too
+                _context.SaveChanges();
+            }
+        }
+        private static void AddNewSamuraiWithHorse()
+        {
+            var samurai = new Samurai { Name = "Jina Ujichika" };
+            samurai.Horse = new Horse { Name = "Silver" };
+            _context.Samurais.Add(samurai);
+            _context.SaveChanges();
+        }
+        private static void AddNewHorseToSamuraiUsinbgId()
+        {
+            var horse = new Horse { Name = "Scout", SamuraiId = 2 };
+            _context.Add(horse);
+            _context.SaveChanges();
+        }
+        private static void AddNewHorseToDisconnectedSamuraiObject()
+        {
+            var samurai = _context.Samurais.AsNoTracking().FirstOrDefault(s => s.Id == 5);
+            samurai.Horse = new Horse { Name = "Mr. Ed" };
+
+            using var newContext = new SamuraiContext();
+            newContext.Samurais.Attach(samurai);
+            newContext.SaveChanges();
+        }
+        private static void GetSamuraiWithHorse()
+        {
+            var samurais = _context.Samurais.Include(s => s.Horse).ToList();
+        }
+        private static void GetHorsesWithSamurai()
+        {
+            // OPTION 1
+            var horseonly = _context.Set<Horse>().Find(3);
+            // OPTION 2
+            var horseWithSamurai = _context.Samurais.Include(s => s.Horse)
+                                           .FirstOrDefault(s => s.Horse.Id == 3);
+            // OPTION 3
+            var horseSamuraiPairs = _context.Samurais
+                .Where(s => s.Horse != null)
+                .Select(s => new { Horse = s.Horse, Samurai = s })
+                .ToList();
         }
 
     }
