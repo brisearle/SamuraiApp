@@ -44,6 +44,12 @@ namespace SamuraiApp.UI
             //AddNewHorseToDisconnectedSamuraiObject();
             //GetSamuraiWithHorse();
             //GetHorsesWithSamurai();
+            //QuerySamuraiBattleStats();
+            //QueryUsingRawSql();
+            //QueryRelatedUsingRawSql();
+            //DANGERQueryUsingRawSqlWithInterpolation();
+            //QueryUsingFromSqlRawStoredProc();
+            //ExecuteSomeRawSql()
             Console.Write("Press any Key...");
             Console.ReadKey();
         }
@@ -343,6 +349,55 @@ namespace SamuraiApp.UI
                 .Where(s => s.Horse != null)
                 .Select(s => new { Horse = s.Horse, Samurai = s })
                 .ToList();
+        }
+        private static void QuerySamuraiBattleStats()
+        {
+            //var stats = _context.SamuraiBattleStats.ToList();
+            var firststat = _context.SamuraiBattleStats.FirstOrDefault();
+            var sampsonState = _context.SamuraiBattleStats
+                .FirstOrDefault(b => b.Name == "SampsonSan");
+            // Below Code looks fine, but will fail because Object does not have a key for find 
+            //var findone = _context.SamuraiBattleStats.Find(2);
+        }
+        private static void QueryUsingRawSql()
+        {
+            var samurais = _context.Samurais.FromSqlRaw("Select * from samurais").ToList();
+        }
+        private static void QueryRelatedUsingRawSql()
+        {
+            var samurais = _context.Samurais.FromSqlRaw(
+                "Select Id, Name from Samurais").Include(s => s.Quotes).ToList();
+        }
+        private static void DANGERQueryUsingRawSqlWithInterpolation()
+        {
+            /**
+             * Should use FromSqlInterpolated, this code is open to injection
+             **/
+            string name = "Kikuchyo";
+            var samurais = _context.Samurais
+                .FromSqlRaw($"Select * from Samurais Where Name= {name}")
+                .ToList();
+        }
+        private static void QueryUsingFromSqlRawStoredProc()
+        {
+            var text = "Happy";
+            //option
+            /*var samurais = _context.Samurais.FromSqlRaw(
+                "EXEC dbo.SamuraisWhoSaidAWord {0}", text).ToList();*/
+            //Alternative
+            var samurais = _context.Samurais.FromSqlInterpolated(
+                $"EXEC dbo.SamuraisWhoSaidAWord {text}").ToList();
+        }
+        private static void ExecuteSomeRawSql()
+        {
+            var samuraiId = 2;
+
+            /*var affected = _context.Database
+                .ExecuteSqlRaw("EXEC DeleteQuotesForSamurai {0}", samuraiId);*/
+            
+            // or using Interpolation
+            var affected = _context.Database
+                .ExecuteSqlInterpolated($"EXEC DeleteQuotesForSamurai {samuraiId}");
         }
 
     }

@@ -10,6 +10,7 @@ namespace SamuraiApp.Data
         public DbSet<Samurai> Samurais { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<Battle> Battles { get; set; }
+        public DbSet<SamuraiBattleStat> SamuraiBattleStats { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -33,6 +34,8 @@ namespace SamuraiApp.Data
 
             // Update Horse table name
             modelBuilder.Entity<Horse>().ToTable("Horses");
+            // Let EF Core know it intentionally has no key and that it already has a view and does not need a table generated
+            modelBuilder.Entity<SamuraiBattleStat>().HasNoKey().ToView("SamuraiBattleStats");
         }
     }
 }
