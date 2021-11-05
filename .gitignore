@@ -12,3 +12,7 @@ SamuraiApp.Data/bin/
 SamuraiApp.Domain/bin/
 
 SamuraiApp.UI/bin/
+
+SamuraiApp.Test/bin/
+
+SamuraiApp.Test/obj/
